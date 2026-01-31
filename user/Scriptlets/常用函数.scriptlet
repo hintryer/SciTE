@@ -1,0 +1,37 @@
+﻿; 生成随机手机号函数
+GenerateRandomPhone()
+{
+    Prefixes:= ["136", "137", "138", "139", "150", "151", "152", "157", "158", "159", "182", "188","130", "131", "132","166"]
+    prefix := Prefixes[Random(1, Prefixes.Length)]  ; 随机号段
+    suffix := Format("{:08d}", Random(0, 99999999))   ; 8位随机数（补零）
+    return prefix . suffix
+}
+; 生成随机地址（格式如：开放路16号）
+GenerateRandomAddress()
+{
+    roadNames := ["开放路","洺水路","交通大街","北外大街","顺城路","朝阳路","中华大街","光明路","振兴路","友谊路","建设大街","文化大街"]
+    randomRoad := roadNames[Random(1, roadNames.Length)]
+    randomNumber := Random(1, 999)
+    randomAddress := randomRoad . randomNumber . "号"
+    return randomAddress
+}
+; 通过控件赋值上传照片
+UploadPhoto_ControlSetText(photoPath) {
+    ; 检查文件是否存在
+    if !FileExist(photoPath) {
+        MsgBox("文件不存在：" photoPath)
+        return
+    }
+    ; 等待文件选择对话框弹出（最多等3秒）
+    hWnd := WinWait("打开",, 3)
+    if (hWnd = 0) {
+        MsgBox("文件选择框未弹出！")
+        return
+    }
+
+    ControlSetText(photoPath, "Edit1", hWnd)
+    Sleep(200)
+
+    ControlClick("Button1", hWnd)
+    Sleep(1500)  ; 等待上传完成（根据照片大小调整）
+}

@@ -1,0 +1,46 @@
+﻿#Requires AutoHotkey v2.0
+#SingleInstance Force
+#Include <FindText>
+#Include <Print>
+#Include <RapidOCR\RapidOCR2>
+
+CoordMode "Mouse", "Screen"
+
+inst := RapidOCR()
+txtOCR(x1, y1, x2, y2) {
+    return inst.OCR([x1, y1, x2 - x1, y2 - y1])
+}
+ /**
+ * 封装FindText查找并点击函数
+ * @param Text 待查找的文本特征串（必填）
+ * @param offsetX X 轴偏移量（可选，默认 0）
+ * @param offsetY Y 轴偏移量（可选，默认 0）
+ * @param clickBtn 点击按钮（可选，默认 "L" 左键；可选 "R" 右键 /"M" 中键或者次数）
+ * @param index 匹配项索引（第 1 个为 1，第 2 个为 2... 默认 1）
+ * @returns 返回一个二级数组，;第一级是每个结果对象，第二级是结果对象的具体信息对象
+ * 举例  FindTextClick(下拉选项,,,,,2) ：点击第二个下拉项
+ * 举例  FindTextClick(输入框,100,0,3) ：点击输入框，X轴偏移100，三次点击
+*/
+FindTextClick(Text, offsetX:=0, offsetY:=0, clickBtn:="", clickType:="" , index:=1)
+{
+    if (ok:=FindText(&X:='wait', &Y:=-1, 0,0, 0, 0, 0.1, 0, Text))
+    {
+        if (ok.Length >= index)
+        {
+            ; 计算偏移后坐标（第N个匹配项的坐标 + 偏移量）
+            clickX := ok[index].X + offsetX
+            clickY := ok[index].Y + offsetY
+            FindText().Click(clickX, clickY, clickBtn,clickType)
+            Sleep 300
+            return ok  ; 查找并点击成功
+        }
+    }
+    return false  ; 未找到文本
+}
+main()
+{
+	
+}
+F9::main()
+Pause::Pause -1
+Esc:: ExitApp()
