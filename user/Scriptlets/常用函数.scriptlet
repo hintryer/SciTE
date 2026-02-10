@@ -15,23 +15,60 @@ GenerateRandomAddress()
     randomAddress := randomRoad . randomNumber . "号"
     return randomAddress
 }
-; 通过控件赋值上传照片
-UploadPhoto_ControlSetText(photoPath) {
-    ; 检查文件是否存在
-    if !FileExist(photoPath) {
-        MsgBox("文件不存在：" photoPath)
-        return
+; 封装版后台点击函数 - 极简、无报错、坐标正确
+BackClick(hWnd, AbsX, AbsY, gap:=20) {
+    if !WinExist("ahk_id " hWnd) {
+        ToolTip("窗口句柄无效！",,1)
+        SetTimer(ToolTip, -1000)
+        return false
     }
-    ; 等待文件选择对话框弹出（最多等3秒）
-    hWnd := WinWait("打开",, 3)
-    if (hWnd = 0) {
-        MsgBox("文件选择框未弹出！")
-        return
-    }
-
-    ControlSetText(photoPath, "Edit1", hWnd)
-    Sleep(200)
-
-    ControlClick("Button1", hWnd)
-    Sleep(1500)  ; 等待上传完成（根据照片大小调整）
+    Coord := (AbsY << 16) | (AbsX & 0xFFFF) ; 正确坐标组合
+    PostMessage(0x201, 0x1, Coord, , "ahk_id " hWnd)
+    Sleep(gap)
+    PostMessage(0x202, 0, Coord, , "ahk_id " hWnd)
+    return true
 }
+hWnd := WinExist("Google Chrome ahk_exe chrome.exe")
+CreateHoleToWindow(hWnd) ; create hole
+
+SendMessage(WM_ACTIVATE := 0x0006 , 1, hWnd,, hWnd)
+ControlSend("{Ctrl up}{Ctrl down}l{Ctrl up}google.com",, hWnd)
+
+CreateHoleToWindow() ; remove hole
+
+#Requires AutoHotkey v2
+
+
+
+CreateHoleToWindow(WinTitle := "") {
+    static holed := Map()
+    if !WinTitle && holed.Count {
+        for hWnd, _ in holed
+            WinSetRegion(, hWnd)
+        holed := Map()
+        return
+    }
+    if IsWindowPartiallyVisible(WinTitle)
+        return
+    local hWnd := IsInteger(WinTitle) ? WinTitle : WinExist(WinTitle)
+    WinGetPos(&X, &Y, &W, &H, hWnd), mX := X + W//2, mY := Y + H//2
+    while ((thWnd := WindowFromPoint(mX, mY)) != hWnd) && !holed.Has(thWnd) {
+        WinGetPos(&tX, &tY, &tW, &tH, thWnd)
+        rX := mX - tX, rY := mY - tY
+        WinSetRegion("0-0 0-" tH " " tW "-" tH " " tW "-0 0-0 " rX "-" rY " " rX "-" (rY+1) " " (rX+1) "-" (rY+1) " " (rX+1) "-" rY " " rX "-" rY, thWnd)
+        holed[thWnd] := 1
+    }
+}
+
+IsWindowPartiallyVisible(WinTitle:="") { 
+    local hWnd := IsInteger(WinTitle) ? WinTitle : WinExist(WinTitle)
+    WinGetPos(&X, &Y, &W, &H, hWnd)
+    return (hWnd == WindowFromPoint(X, Y)) || (hwnd == WindowFromPoint(X, Y+H-1)) || (hwnd == WindowFromPoint(X+W-1, Y)) || (hwnd == WindowFromPoint(X+W-1, Y+H-1))
+}
+
+WindowFromPoint(X, Y?) { ; by SKAN and Linear Spoon
+    return DllCall("GetAncestor", "Ptr", DllCall("user32.dll\WindowFromPoint", "Int64", IsSet(Y) ? (Y << 32 | (X & 0xFFFFFFFF)) : X), "UInt", 2, "Ptr")
+}
+
+; ControlSend(控件名, 要发送的文本, 窗口标识, ...)
+ControlSend("", "{Text}你好！这是AHK v2后台发送的文字", "ahk_id " hWnd)
