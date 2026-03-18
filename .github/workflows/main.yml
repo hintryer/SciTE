@@ -1,60 +1,63 @@
-# 工作流名称
 name: 打包仓库文件并上传
 
-# 触发条件：可根据需要选择
 on:
-  # 1. 手动触发（推荐，可随时运行）
   workflow_dispatch:
-  # 2. 推送到main分支时触发（可选）
+    # 手动触发时可自定义版本号（选填，默认自动生成）
+    inputs:
+      release_version:
+        description: 'Release版本号（如v1.0.0）'
+        required: false
+        default: 'v${{ github.run_id }}'
   # push:
   #   branches: [ main ]
-  # 3. 创建Tag/Release时触发（适合发布版本）
   release:
     types: [created]
 
-# 工作流任务
 jobs:
   package:
-    # 运行环境（Ubuntu最新版）
     runs-on: ubuntu-latest
-    
+    permissions:
+      # 显式授予Release操作权限（核心修复）
+      contents: write
+      
     steps:
-      # 步骤1：拉取仓库代码
       - name: 检出仓库代码
         uses: actions/checkout@v4
         with:
-          # 拉取完整历史（若不需要可删除）
           fetch-depth: 0
 
-      # 步骤2：打包文件（zip格式，可改为tar.gz）
       - name: 打包仓库文件
         run: |
-          # 定义打包文件名（包含时间戳，避免重复）
           PACKAGE_NAME="仓库文件_$(date +%Y%m%d_%H%M%S).zip"
-          # 打包整个仓库（排除.git/.github等无关目录）
           zip -r $PACKAGE_NAME . -x ".git/*" ".github/*" "*.gitignore"
-          # 输出打包文件路径，供后续步骤使用
           echo "PACKAGE_PATH=$(pwd)/$PACKAGE_NAME" >> $GITHUB_ENV
-          # 打印验证：确认文件已生成
           ls -lh $PACKAGE_NAME
 
-      # 步骤3：上传打包文件为Artifact（可在Actions页面下载）
       - name: 上传打包文件到Artifact
         uses: actions/upload-artifact@v4
         with:
-          # Artifact名称（清晰易识别）
           name: 仓库打包文件_${{ github.run_id }}
-          # 要上传的文件路径
           path: ${{ env.PACKAGE_PATH }}
-          # 文件保留时间（默认90天，可自定义）
           retention-days: 30
 
-      # 步骤4：仅在Release触发时，将文件附加到Release
-      - name: 附加打包文件到Release
-        uses: softprops/action-gh-release@v2
-        if: github.event_name == 'release'  # 仅Release触发时执行
-        with:
-          files: ${{ env.PACKAGE_PATH }}  # 要附加的打包文件路径
-          fail_on_unmatched_files: true   # 文件不存在时失败（便于排查）
+      # 步骤1：手动触发时创建Release
+      - name: 手动触发-创建Release
+        if: github.event_name == 'workflow_dispatch'
+        uses: actions/create-release@v1
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}  # GitHub自动生成的令牌，无需手动配置
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ github.event.inputs.release_version }}
+          release_name: 手动打包_${{ github.event.inputs.release_version }}
+          draft: false
+          prerelease: false
+
+      # 步骤2：统一附加文件到Release（兼容手动/Release触发）
+      - name: 附加文件到Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.release_version || github.ref_name }}
+          files: ${{ env.PACKAGE_PATH }}
+          fail_on_unmatched_files: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
