@@ -2,12 +2,11 @@ name: 打包仓库文件并上传
 
 on:
   workflow_dispatch:
-    # 手动触发时自定义版本号（默认值改为固定占位符，后续步骤自动生成）
     inputs:
       release_version:
-        description: 'Release版本号（如v1.0.0，留空则自动生成）'
+        description: '自定义Release版本号（留空则自动生成1.1.X递增版本）'
         required: false
-        default: ''  # 移除github.run_id表达式，改为空值
+        default: ''
   release:
     types: [created]
 
@@ -15,59 +14,81 @@ jobs:
   package:
     runs-on: ubuntu-latest
     permissions:
-      contents: write  # 授予Release操作权限
+      contents: write  # 授予Release/Tag操作权限
     
     steps:
       - name: 检出仓库代码
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0
+          fetch-depth: 0  # 拉取完整历史，用于查询已有Tag
 
-      - name: 打包仓库文件
+      # 步骤1：查询仓库已有Tag，生成1.1.X递增版本号
+      - name: 自动生成递增版本号
+        id: gen_version
         run: |
-          PACKAGE_NAME="仓库文件_$(date +%Y%m%d_%H%M%S).zip"
+          # 如果手动输入了版本号，优先使用
+          if [ -n "${{ github.event.inputs.release_version }}" ]; then
+            VERSION="${{ github.event.inputs.release_version }}"
+          else
+            # 查询仓库所有以1.1开头的Tag，按版本号排序
+            LATEST_TAG=$(git tag --list "1.1.*" | sort -V | tail -n 1)
+            
+            # 如果无1.1.X Tag，初始化为1.1.0；否则自增最后一位
+            if [ -z "$LATEST_TAG" ]; then
+              VERSION="1.1.0"
+            else
+              # 拆分版本号：1.1.0 → 主版本=1，次版本=1，修订版=0
+              MAJOR=$(echo $LATEST_TAG | cut -d. -f1)
+              MINOR=$(echo $LATEST_TAG | cut -d. -f2)
+              PATCH=$(echo $LATEST_TAG | cut -d. -f3)
+              # 修订版+1
+              NEW_PATCH=$((PATCH + 1))
+              VERSION="$MAJOR.$MINOR.$NEW_PATCH"
+            fi
+          fi
+          
+          # 输出版本号到环境变量
+          echo "RELEASE_VERSION=$VERSION" >> $GITHUB_ENV
+          echo "生成的Release版本号：$VERSION"
+
+      # 步骤2：打包文件（固定名称SciTE.zip）
+      - name: 打包仓库文件为SciTE.zip
+        run: |
+          # 固定打包名称为SciTE.zip，覆盖原有文件（若存在）
+          PACKAGE_NAME="SciTE.zip"
+          # 打包整个仓库（排除.git/.github等无关目录）
           zip -r $PACKAGE_NAME . -x ".git/*" ".github/*" "*.gitignore"
+          # 输出文件路径到环境变量
           echo "PACKAGE_PATH=$(pwd)/$PACKAGE_NAME" >> $GITHUB_ENV
+          # 验证文件生成
           ls -lh $PACKAGE_NAME
 
-      - name: 上传打包文件到Artifact
+      # 步骤3：上传打包文件到Artifact（固定名称）
+      - name: 上传SciTE.zip到Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: 仓库打包文件_${{ github.run_id }}
+          name: SciTE_${{ env.RELEASE_VERSION }}  # Artifact名带版本号，便于区分
           path: ${{ env.PACKAGE_PATH }}
           retention-days: 30
 
-      # 步骤1：生成动态版本号（解决inputs默认值不能用表达式的问题）
-      - name: 生成Release版本号
-        id: gen_version
-        run: |
-          # 如果手动触发时没填版本号，用运行ID生成；否则用输入的版本号
-          if [ -z "${{ github.event.inputs.release_version }}" ]; then
-            VERSION="v${{ github.run_id }}"
-          else
-            VERSION="${{ github.event.inputs.release_version }}"
-          fi
-          echo "RELEASE_VERSION=$VERSION" >> $GITHUB_ENV
-
-      # 步骤2：手动触发时创建Release
+      # 步骤4：手动触发时创建Release（Tag为1.1.X）
       - name: 手动触发-创建Release
         if: github.event_name == 'workflow_dispatch'
         uses: actions/create-release@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          tag_name: ${{ env.RELEASE_VERSION }}
-          release_name: 手动打包_${{ env.RELEASE_VERSION }}
+          tag_name: ${{ env.RELEASE_VERSION }}  # Tag为1.1.0/1.1.1/1.1.2...
+          release_name: SciTE_${{ env.RELEASE_VERSION }}  # Release名称带版本号
           draft: false
           prerelease: false
 
-      # 步骤3：统一附加文件到Release
-      - name: 附加文件到Release
+      # 步骤5：附加SciTE.zip到Release（兼容手动/Release触发）
+      - name: 附加SciTE.zip到Release
         uses: softprops/action-gh-release@v2
         with:
-          # 手动触发用生成的版本号，Release触发用原Tag
           tag_name: ${{ github.event_name == 'workflow_dispatch' && env.RELEASE_VERSION || github.ref_name }}
-          files: ${{ env.PACKAGE_PATH }}
+          files: ${{ env.PACKAGE_PATH }}  # 固定上传SciTE.zip
           fail_on_unmatched_files: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
