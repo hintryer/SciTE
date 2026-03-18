@@ -28,47 +28,21 @@ BackClick(hWnd, AbsX, AbsY, gap:=20) {
     PostMessage(0x202, 0, Coord, , "ahk_id " hWnd)
     return true
 }
-hWnd := WinExist("Google Chrome ahk_exe chrome.exe")
-CreateHoleToWindow(hWnd) ; create hole
 
-SendMessage(WM_ACTIVATE := 0x0006 , 1, hWnd,, hWnd)
-ControlSend("{Ctrl up}{Ctrl down}l{Ctrl up}google.com",, hWnd)
-
-CreateHoleToWindow() ; remove hole
-
-#Requires AutoHotkey v2
-
-
-
-CreateHoleToWindow(WinTitle := "") {
-    static holed := Map()
-    if !WinTitle && holed.Count {
-        for hWnd, _ in holed
-            WinSetRegion(, hWnd)
-        holed := Map()
-        return
-    }
-    if IsWindowPartiallyVisible(WinTitle)
-        return
-    local hWnd := IsInteger(WinTitle) ? WinTitle : WinExist(WinTitle)
-    WinGetPos(&X, &Y, &W, &H, hWnd), mX := X + W//2, mY := Y + H//2
-    while ((thWnd := WindowFromPoint(mX, mY)) != hWnd) && !holed.Has(thWnd) {
-        WinGetPos(&tX, &tY, &tW, &tH, thWnd)
-        rX := mX - tX, rY := mY - tY
-        WinSetRegion("0-0 0-" tH " " tW "-" tH " " tW "-0 0-0 " rX "-" rY " " rX "-" (rY+1) " " (rX+1) "-" (rY+1) " " (rX+1) "-" rY " " rX "-" rY, thWnd)
-        holed[thWnd] := 1
-    }
-}
-
-IsWindowPartiallyVisible(WinTitle:="") { 
-    local hWnd := IsInteger(WinTitle) ? WinTitle : WinExist(WinTitle)
-    WinGetPos(&X, &Y, &W, &H, hWnd)
-    return (hWnd == WindowFromPoint(X, Y)) || (hwnd == WindowFromPoint(X, Y+H-1)) || (hwnd == WindowFromPoint(X+W-1, Y)) || (hwnd == WindowFromPoint(X+W-1, Y+H-1))
-}
-
-WindowFromPoint(X, Y?) { ; by SKAN and Linear Spoon
-    return DllCall("GetAncestor", "Ptr", DllCall("user32.dll\WindowFromPoint", "Int64", IsSet(Y) ? (Y << 32 | (X & 0xFFFFFFFF)) : X), "UInt", 2, "Ptr")
-}
 
 ; ControlSend(控件名, 要发送的文本, 窗口标识, ...)
 ControlSend("", "{Text}你好！这是AHK v2后台发送的文字", "ahk_id " hWnd)
+
+FileAppend text "`n", "C:\My Documents\Test.txt", "UTF-8"
+
+MyText := FileRead("C:\My Documents\My File.txt")
+MyTextStr :=StrSplit(MyText, ["`r`n", "`n"],, true)
+
+; 当前用户的桌面文件夹的完整路径和名称
+A_Desktop
+; 当前用户 "我的文档" 文件夹的完整路径和名称. 
+A_MyDocuments
+; 可用于获取或设置系统剪贴板的内容. 
+A_Clipboard
+; 当前脚本所在目录的完整路径. 
+A_ScriptDir
