@@ -2,14 +2,12 @@ name: 打包仓库文件并上传
 
 on:
   workflow_dispatch:
-    # 手动触发时可自定义版本号（选填，默认自动生成）
+    # 手动触发时自定义版本号（默认值改为固定占位符，后续步骤自动生成）
     inputs:
       release_version:
-        description: 'Release版本号（如v1.0.0）'
+        description: 'Release版本号（如v1.0.0，留空则自动生成）'
         required: false
-        default: 'v${{ github.run_id }}'
-  # push:
-  #   branches: [ main ]
+        default: ''  # 移除github.run_id表达式，改为空值
   release:
     types: [created]
 
@@ -17,9 +15,8 @@ jobs:
   package:
     runs-on: ubuntu-latest
     permissions:
-      # 显式授予Release操作权限（核心修复）
-      contents: write
-      
+      contents: write  # 授予Release操作权限
+    
     steps:
       - name: 检出仓库代码
         uses: actions/checkout@v4
@@ -40,23 +37,36 @@ jobs:
           path: ${{ env.PACKAGE_PATH }}
           retention-days: 30
 
-      # 步骤1：手动触发时创建Release
+      # 步骤1：生成动态版本号（解决inputs默认值不能用表达式的问题）
+      - name: 生成Release版本号
+        id: gen_version
+        run: |
+          # 如果手动触发时没填版本号，用运行ID生成；否则用输入的版本号
+          if [ -z "${{ github.event.inputs.release_version }}" ]; then
+            VERSION="v${{ github.run_id }}"
+          else
+            VERSION="${{ github.event.inputs.release_version }}"
+          fi
+          echo "RELEASE_VERSION=$VERSION" >> $GITHUB_ENV
+
+      # 步骤2：手动触发时创建Release
       - name: 手动触发-创建Release
         if: github.event_name == 'workflow_dispatch'
         uses: actions/create-release@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          tag_name: ${{ github.event.inputs.release_version }}
-          release_name: 手动打包_${{ github.event.inputs.release_version }}
+          tag_name: ${{ env.RELEASE_VERSION }}
+          release_name: 手动打包_${{ env.RELEASE_VERSION }}
           draft: false
           prerelease: false
 
-      # 步骤2：统一附加文件到Release（兼容手动/Release触发）
+      # 步骤3：统一附加文件到Release
       - name: 附加文件到Release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.release_version || github.ref_name }}
+          # 手动触发用生成的版本号，Release触发用原Tag
+          tag_name: ${{ github.event_name == 'workflow_dispatch' && env.RELEASE_VERSION || github.ref_name }}
           files: ${{ env.PACKAGE_PATH }}
           fail_on_unmatched_files: true
         env:
