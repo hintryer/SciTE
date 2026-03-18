@@ -1,0 +1,57 @@
+# 工作流名称
+name: 打包仓库文件并上传
+
+# 触发条件：可根据需要选择
+on:
+  # 1. 手动触发（推荐，可随时运行）
+  workflow_dispatch:
+  # 2. 推送到main分支时触发（可选）
+  # push:
+  #   branches: [ main ]
+  # 3. 创建Tag时触发（适合发布版本）
+  # release:
+  #   types: [created]
+
+# 工作流任务
+jobs:
+  package:
+    # 运行环境（Ubuntu最新版）
+    runs-on: ubuntu-latest
+    
+    steps:
+      # 步骤1：拉取仓库代码
+      - name: 检出仓库代码
+        uses: actions/checkout@v4
+        with:
+          # 拉取完整历史（若不需要可删除）
+          fetch-depth: 0
+
+      # 步骤2：打包文件（zip格式，可改为tar.gz）
+      - name: 打包仓库文件
+        run: |
+          # 定义打包文件名（包含时间戳，避免重复）
+          PACKAGE_NAME="仓库文件_$(date +%Y%m%d_%H%M%S).zip"
+          # 打包整个仓库（排除.git目录）
+          zip -r $PACKAGE_NAME . -x ".git/*" ".github/*" "*.gitignore"
+          # 输出打包文件路径，供后续步骤使用
+          echo "PACKAGE_PATH=$(pwd)/$PACKAGE_NAME" >> $GITHUB_ENV
+
+      # 步骤3：上传打包文件为Artifact（可在Actions页面下载）
+      - name: 上传打包文件
+        uses: actions/upload-artifact@v4
+        with:
+          # Artifact名称
+          name: 仓库打包文件
+          # 要上传的文件路径（步骤2生成的）
+          path: ${{ env.PACKAGE_PATH }}
+          # 文件保留时间（默认90天，可自定义）
+          retention-days: 30
+
+      # 可选步骤：若触发条件是Release，将文件附加到Release
+      - name: 附加到Release
+        uses: softprops/action-gh-release@v2
+        if: github.event_name == 'release'
+      #   with:
+      #     files: ${{ env.PACKAGE_PATH }}
+      #   env:
+      #     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
