@@ -18,11 +18,11 @@ jobs:
     
     steps:
       - name: 检出仓库代码
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           fetch-depth: 0  # 拉取完整历史，用于查询已有Tag
 
-      # 步骤1：查询仓库已有Tag，生成1.1.X递增版本号
+      # 步骤1：查询仓库已有Tag，生成1.1.X递增版本号（用环境文件传递变量）
       - name: 自动生成递增版本号
         id: gen_version
         run: |
@@ -47,7 +47,7 @@ jobs:
             fi
           fi
           
-          # 输出版本号到环境变量
+          # 【关键修复】用环境文件替代set-output（GitHub推荐方式）
           echo "RELEASE_VERSION=$VERSION" >> $GITHUB_ENV
           echo "生成的Release版本号：$VERSION"
 
@@ -71,24 +71,28 @@ jobs:
           path: ${{ env.PACKAGE_PATH }}
           retention-days: 30
 
-      # 步骤4：手动触发时创建Release（Tag为1.1.X）
-      - name: 手动触发-创建Release
+      # 步骤4：手动触发时创建Release（替换废弃的create-release，用官方最新方式）
+      - name: 手动触发-创建Tag和Release
         if: github.event_name == 'workflow_dispatch'
-        uses: actions/create-release@v1
+        run: |
+          # 1. 创建Tag（若不存在）
+          if ! git tag -l | grep -q "${{ env.RELEASE_VERSION }}"; then
+            git tag ${{ env.RELEASE_VERSION }}
+            git push origin ${{ env.RELEASE_VERSION }}
+          fi
+          
+          # 2. 创建Release（用gh cli替代老旧Action，无废弃命令）
+          gh release create ${{ env.RELEASE_VERSION }} \
+            --title "SciTE_${{ env.RELEASE_VERSION }}" \
+            --notes "自动打包发布 SciTE ${{ env.RELEASE_VERSION }}" \
+            ${{ env.PACKAGE_PATH }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          tag_name: ${{ env.RELEASE_VERSION }}  # Tag为1.1.0/1.1.1/1.1.2...
-          release_name: SciTE_${{ env.RELEASE_VERSION }}  # Release名称带版本号
-          draft: false
-          prerelease: false
 
-      # 步骤5：附加SciTE.zip到Release（兼容手动/Release触发）
-      - name: 附加SciTE.zip到Release
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: ${{ github.event_name == 'workflow_dispatch' && env.RELEASE_VERSION || github.ref_name }}
-          files: ${{ env.PACKAGE_PATH }}  # 固定上传SciTE.zip
-          fail_on_unmatched_files: true
+      # 步骤5：Release触发时附加文件到Release
+      - name: Release触发-附加SciTE.zip到Release
+        if: github.event_name == 'release'
+        run: |
+          gh release upload ${{ github.ref_name }} ${{ env.PACKAGE_PATH }} --clobber
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
