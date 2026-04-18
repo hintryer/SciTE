@@ -2,25 +2,29 @@
 ; 参数：文件路径（必填，字符串类型）
 ; 返回值：RowStr（分割后的每行内容为数组元素，索引从1开始）
 ; 异常：读取失败时返回空数组，并弹出错误提示
-ReadLine(FilePath) {
+ReadLine(FilePath)
+{
     ; 初始化返回值为空数组
     RowStr := []
-    
-    try {
+
+    try
+    {
         ; 1. 读取文件内容（指定UTF-8编码，解决中文乱码）
         文本内容 := FileRead(FilePath, "UTF-8")
-        
+
         ; 2. 按换行分割（优先`r`n，兼容`n，忽略空行）
         RowStr := StrSplit(文本内容, ["`r`n", "`n"],, true)
-        
+
         ; 可选：调试用，注释掉则不弹窗
         ; MsgBox "文件读取成功！`n总行数：" RowStr.Length "`n第一行内容：" RowStr[1]
-    } catch as 错误 {
+    }
+    catch as 错误
+    {
         ; 异常处理：提示错误信息，返回空数组
         MsgBox "读取文件失败：`n" 错误.Message "`nFilePath：" FilePath, "读取错误", "IconError"
         RowStr := []
     }
-    
     ; 返回分割后的RowStr
     return RowStr
 }
+
