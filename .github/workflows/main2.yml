@@ -1,0 +1,30 @@
+name: Main
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "输入发布标签，例如 v1.0.0"
+        required: true
+        default: "v1.0.0"
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write  # 给发布权限
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Build
+        run: echo ${{ github.sha }} > Release.txt
+
+      - name: Test
+        run: cat Release.txt
+
+      - name: Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.event.inputs.tag }}  # 用你手动输入的 tag
+          files: Release.txt

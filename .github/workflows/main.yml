@@ -1,0 +1,98 @@
+name: 打包仓库文件并上传
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_version:
+        description: '自定义Release版本号（留空则自动生成1.1.X递增版本）'
+        required: false
+        default: ''
+  release:
+    types: [created]
+
+jobs:
+  package:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write  # 授予Release/Tag操作权限
+    
+    steps:
+      - name: 检出仓库代码
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0  # 拉取完整历史，用于查询已有Tag
+
+      # 步骤1：查询仓库已有Tag，生成1.1.X递增版本号（用环境文件传递变量）
+      - name: 自动生成递增版本号
+        id: gen_version
+        run: |
+          # 如果手动输入了版本号，优先使用
+          if [ -n "${{ github.event.inputs.release_version }}" ]; then
+            VERSION="${{ github.event.inputs.release_version }}"
+          else
+            # 查询仓库所有以1.1开头的Tag，按版本号排序
+            LATEST_TAG=$(git tag --list "1.1.*" | sort -V | tail -n 1)
+            
+            # 如果无1.1.X Tag，初始化为1.1.0；否则自增最后一位
+            if [ -z "$LATEST_TAG" ]; then
+              VERSION="1.1.0"
+            else
+              # 拆分版本号：1.1.0 → 主版本=1，次版本=1，修订版=0
+              MAJOR=$(echo $LATEST_TAG | cut -d. -f1)
+              MINOR=$(echo $LATEST_TAG | cut -d. -f2)
+              PATCH=$(echo $LATEST_TAG | cut -d. -f3)
+              # 修订版+1
+              NEW_PATCH=$((PATCH + 1))
+              VERSION="$MAJOR.$MINOR.$NEW_PATCH"
+            fi
+          fi
+          
+          # 【关键修复】用环境文件替代set-output（GitHub推荐方式）
+          echo "RELEASE_VERSION=$VERSION" >> $GITHUB_ENV
+          echo "生成的Release版本号：$VERSION"
+
+      # 步骤2：打包文件（固定名称SciTE.zip）
+      - name: 打包仓库文件为SciTE.zip
+        run: |
+          # 固定打包名称为SciTE.zip，覆盖原有文件（若存在）
+          PACKAGE_NAME="SciTE.zip"
+          # 打包整个仓库（排除.git/.github等无关目录）
+          zip -r $PACKAGE_NAME . -x ".git/*" ".github/*" "*.gitignore"
+          # 输出文件路径到环境变量
+          echo "PACKAGE_PATH=$(pwd)/$PACKAGE_NAME" >> $GITHUB_ENV
+          # 验证文件生成
+          ls -lh $PACKAGE_NAME
+
+      # 步骤3：上传打包文件到Artifact（固定名称）
+      - name: 上传SciTE.zip到Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: SciTE_${{ env.RELEASE_VERSION }}  # Artifact名带版本号，便于区分
+          path: ${{ env.PACKAGE_PATH }}
+          retention-days: 30
+
+      # 步骤4：手动触发时创建Release（替换废弃的create-release，用官方最新方式）
+      - name: 手动触发-创建Tag和Release
+        if: github.event_name == 'workflow_dispatch'
+        run: |
+          # 1. 创建Tag（若不存在）
+          if ! git tag -l | grep -q "${{ env.RELEASE_VERSION }}"; then
+            git tag ${{ env.RELEASE_VERSION }}
+            git push origin ${{ env.RELEASE_VERSION }}
+          fi
+          
+          # 2. 创建Release（用gh cli替代老旧Action，无废弃命令）
+          gh release create ${{ env.RELEASE_VERSION }} \
+            --title "SciTE_${{ env.RELEASE_VERSION }}" \
+            --notes "自动打包发布 SciTE ${{ env.RELEASE_VERSION }}" \
+            ${{ env.PACKAGE_PATH }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # 步骤5：Release触发时附加文件到Release
+      - name: Release触发-附加SciTE.zip到Release
+        if: github.event_name == 'release'
+        run: |
+          gh release upload ${{ github.ref_name }} ${{ env.PACKAGE_PATH }} --clobber
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
