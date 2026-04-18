@@ -1,0 +1,29 @@
+name: upzip
+
+on:
+  push:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "输入发布标签，例如 v1.0.0"
+        required: true
+        default: "v1.0.0"
+
+jobs:
+  upzip:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Pack directory
+        run: zip -r SciTE.zip ./SciTE
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: 'V1.0'
+          files: |
+            SciTE.zip
