@@ -1,0 +1,29 @@
+name: upzip
+
+on:
+  workflow_dispatch:
+
+jobs:
+  upzip:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: 打包win7proable
+        run: |
+          zip -r SciTE_Win7.zip ./SciTE -x "./SciTE/AutoHotKey/Lib/RapidOcr/*" -x "./SciTE/OcrInit"
+
+      - name: 打包win10proable
+        run: |
+          zip -r SciTE_Win10.zip ./SciTE -x "./SciTE/AutoHotKey/Lib/RapidOcr7/*" -x "./SciTE/OcrInit7"
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v3
+        with:
+          tag_name: 'V1.0'
+          files: |
+            SciTE_Win7.zip
+            SciTE_Win10.zip

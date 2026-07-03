@@ -1,0 +1,35 @@
+﻿#Requires AutoHotkey v2.0
+#SingleInstance Force
+#Include <FindText>
+
+; 如果 file=0 或 "" ，会保存到剪贴板
+; x1, y1 (整数): 截图区域的左上角坐标。
+; x2, y2 (整数): 截图区域的右下角坐标。
+
+;  截取全屏
+SaveScreenshot()
+{
+	fullPath := A_ScriptDir "\Images\" . "Screenshot_" . A_Now . ".bmp"
+	FindText().SavePic(fullPath)
+}
+
+;  窗口截屏
+SaveWindowScreenshot(winTitle)
+{
+	; 检查窗口是否存在
+	if WinExist(winTitle)
+	{
+		; 获取窗口的位置和大小
+		WinGetPos &winX, &winY, &winW, &winH, winTitle
+
+		savePath := A_ScriptDir "\Images\" . "Screenshot_" . A_Now . ".bmp"
+
+		FindText().SavePic(savePath, winX, winY, winX + winW, winY + winH)
+
+		;	MsgBox "窗口 '" winTitle "' 的截图已保存到:`n" savePath
+	}
+	else
+	{
+		MsgBox "错误：窗口 '" winTitle "' 未找到！"
+	}
+}
