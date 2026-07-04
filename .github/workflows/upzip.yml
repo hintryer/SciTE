@@ -18,7 +18,7 @@ jobs:
 
       - name: 打包win10proable
         run: |
-          zip -r SciTE_Win10.zip ./SciTE -x "./SciTE/AutoHotKey/Lib/RapidOcr7/*" -x "./SciTE/OcrInit7"
+          zip -r SciTE.zip ./SciTE -x "./SciTE/AutoHotKey/Lib/RapidOcr7/*" -x "./SciTE/OcrInit7"
 
       - name: Create Release
         uses: softprops/action-gh-release@v3
@@ -26,4 +26,4 @@ jobs:
           tag_name: 'V1.0'
           files: |
             SciTE_Win7.zip
-            SciTE_Win10.zip
+            SciTE.zip
