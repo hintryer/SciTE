@@ -1,0 +1,17 @@
+﻿#Requires AutoHotkey v2.0
+#SingleInstance Force
+#Include <FindInit>
+#Include <Print>
+#Include <OcrInit>
+
+
+main()
+{
+	Text := OCRRand(50, 50, 500, 500)
+	xx:="|<xx>##0.90$0/0/D0D0D0,-15/-16/BBBBBB,1/-16/DFDFDF,-15/-1/C2C2C2,-16/-12/B0B0B0,-5/0/B6B6B6,-9/-5/FCFCFC,-11/-10/FCFCFC,-3/-10/FCFCFC,-4/-5/FCFCFC,0/-1/C2C2C2,-1/-1/F1F1F1"
+	FindTextClick(xx)
+}
+
+F9::main()
+Pause::Pause -1
+Esc:: ExitApp()

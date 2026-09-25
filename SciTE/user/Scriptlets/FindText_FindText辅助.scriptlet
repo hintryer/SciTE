@@ -1,0 +1,46 @@
+﻿#Requires AutoHotkey v2.0
+#SingleInstance Force
+#Include <FindText>
+#Include <Print>
+
+;全屏/窗口截图
+SavePic()
+{
+    ; 如果 file=0 或 "" ，会保存到剪贴板
+    ; x1, y1 (整数): 截图区域的左上角坐标。
+    ; x2, y2 (整数): 截图区域的右下角坐标。
+    FindText().SavePic(0, 0, 0, 0, 0)
+    Print("全屏截图已保存到剪贴板。")
+    FindText().SavePic(0, 100, 100, 200, 200)
+    Print("窗口截图已保存到剪贴板。")
+    FindText().SavePic(A_ScriptDir "\full.png", 0, 0, 0, 0, 1)
+    Print("全屏截图已保存到文件: " A_ScriptDir "\full.png")
+}
+
+; 显示截图，一般用不上
+ShowPic()
+{
+    ft := FindText()
+    ft.ShowPic("C:\Users\ginde\Pictures\snap.png", 1, &x, &y, &w, &h)
+    FindText().SavePic(0, 100, 100, 200, 200)
+    FindText().ShowPic(0, 1, &outX, &outY, &outW, &outH)
+}
+
+ShowScreenShot()
+{
+    Print("开始截图...")
+    ; 在坐标100, 100和500, 500之间进行新的屏幕截图
+    FindText().Screenshot(100, 100, 500, 500) 
+    ; 在屏幕上显示拍摄的屏幕截图。由于我们指定0作为最后一个参数，该函数将使用screenshot函数之前拍摄的屏幕截图。
+    FindText().ShowScreenShot(100, 100, 500, 500, 0)
+}
+WaitChange()
+{
+    FindText().ScreenShot()
+    Print("等待屏幕变化...")
+    ; 等待屏幕变化，-1表示无限等待，100,100,500,500表示监控的屏幕区域
+    FindText().WaitChange(-1, 100, 100, 500, 500)
+    Print("屏幕已发生变化。")
+}
+F9:: WaitChange()
+Esc:: ExitApp ; 按下 Esc 键退出脚本
