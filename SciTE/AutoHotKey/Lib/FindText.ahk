@@ -30,7 +30,7 @@ if (!A_IsCompiled && A_LineFile=A_ScriptFullPath)
   FindText().Gui("Show")
 
 
-;===== Copy The Following Functions To Your Own Code Just once =====
+;===== 复制下面的函数和类到你的代码中仅仅一次 =====
 
 
 FindText(args*)
@@ -1166,9 +1166,9 @@ DrawHBM(hBM, lines)
   DllCall("DeleteObject", "Ptr",mDC)
 }
 
-; Bind the window so that it can find images when obscured
-; by other windows, it's equivalent to always being
-; at the front desk. Unbind Window using FindText().BindWindow(0)
+
+; 绑定窗口从而可以后台查找这个窗口的图像
+; 相当于始终在前台。解绑窗口使用 FindText().BindWindow(0)
 
 BindWindow(bind_id:=0, bind_mode:=0, get_id:=0, get_mode:=0)
 {
@@ -1204,8 +1204,8 @@ BindWindow(bind_id:=0, bind_mode:=0, get_id:=0, get_mode:=0)
   }
 }
 
-; Use FindText().CaptureCursor(1) to Capture Cursor
-; Use FindText().CaptureCursor(0) to Cancel Capture Cursor
+; 使用 FindText().CaptureCursor(1) 设置抓图时捕获鼠标
+; 使用 FindText().CaptureCursor(0) 取消抓图时捕获鼠标
 
 CaptureCursor(hDC:=0, zx:=0, zy:=0, zw:=0, zh:=0, get_cursor:=0)
 {
@@ -1295,9 +1295,8 @@ ASCII(s)
   return s
 }
 
-; You can put the text library at the beginning of the script,
-; and Use FindText().PicLib(Text,1) to add the text library to PicLib()'s Lib,
-; Use FindText().PicLib("comment1|comment2|...") to get text images from Lib
+; 可以在脚本的开头用 FindText().PicLib(Text,1) 导入字库,
+; 然后使用 FindText().PicLib("说明文字1|说明文字2|...") 获取字库中的数据
 
 PicLib(comments, add_to_Lib:=0, index:=1)
 {
@@ -1329,15 +1328,15 @@ PicLib(comments, add_to_Lib:=0, index:=1)
   }
 }
 
-; Decompose a string into individual characters and get their data
+; 分割字符串为单个文字并获取数据
 
 PicN(Number, index:=1)
 {
   return this.PicLib(RegExReplace(Number,".","|$0"), 0, index)
 }
 
-; Use FindText().PicX(Text) to automatically cut into multiple characters
-; Can't be used in ColorPos mode, because it can cause position errors
+; 使用 FindText().PicX(Text) 可以将文字分割成多个单字的组合，从而适应间隔变化
+; 但是不能用于“颜色位置二值化”模式, 因为位置是与整体图像相关的
 
 PicX(Text)
 {
@@ -1361,16 +1360,14 @@ PicX(Text)
   return Text
 }
 
-; Screenshot and retained as the last screenshot.
-
+; 截屏，作为后续操作要用的“上一次的截屏”
 ScreenShot(x1:=0, y1:=0, x2:=0, y2:=0)
 {
   this.FindText(,, x1, y1, x2, y2)
 }
 
-; Get the RGB color of a point from the last screenshot.
-; If the point to get the color is beyond the range of
-; Screen, it will return White color (0xFFFFFF).
+; 从“上一次的截屏”中快速获取指定坐标的RGB颜色
+; 如果坐标超出了屏幕范围，将返回白色 (0xFFFFFF).
 
 GetColor(x, y, fmt:=1)
 {
@@ -1380,7 +1377,7 @@ GetColor(x, y, fmt:=1)
   return (fmt ? Format("0x{:06X}",c&0xFFFFFF) : c)
 }
 
-; Set the RGB color of a point in the last screenshot
+; 在“上一次的截屏”中设置点的RGB颜色
 
 SetColor(x, y, color:=0x000000)
 {
@@ -1389,13 +1386,11 @@ SetColor(x, y, color:=0x000000)
     NumPut("uint", color, bits.Scan0+y*bits.Stride+x*4)
 }
 
-; Identify a line of text or verification code
-; based on the result returned by FindText().
-; offsetX is the maximum interval between two texts,
-; if it exceeds, a "*" sign will be inserted.
-; offsetY is the maximum height difference between two texts.
-; overlapW is used to set the width of the overlap.
-; Return Association array {text:Text, x:X, y:Y, w:W, h:H}
+; 根据 FindText() 的结果识别一行文字或验证码
+; offsetX 为两个文字的最大间隔，超过会插入*号
+; offsetY 为两个文字的最大高度差
+; overlapW 用于设置覆盖的宽度
+; 最后返回数组:{text:识别结果, x:结果左上角X, y:结果左上角Y, w:宽, h:高}
 
 Ocr(ok, offsetX:=20, offsetY:=20, overlapW:=0)
 {
@@ -1432,8 +1427,8 @@ Ocr(ok, offsetX:=20, offsetY:=20, overlapW:=0)
   return {text:ocr_Text, x:ocr_X, y:min_Y, w:min_X-ocr_X, h:max_Y-min_Y}
 }
 
-; Sort the results of FindText() from left to right
-; and top to bottom, ignore slight height difference
+; 按照从左到右、从上到下的顺序排序FindText()的结果
+; 忽略轻微的Y坐标差距，返回排序后的数组对象
 
 Sort(ok, dy:=10)
 {
@@ -1461,7 +1456,7 @@ Sort(ok, dy:=10)
   return ok2
 }
 
-; Sort the results of FindText() according to the nearest distance
+; 以指定点为中心，按从近到远排序FindText()的结果，返回排序后的数组
 
 Sort2(ok, px, py)
 {
@@ -1478,7 +1473,7 @@ Sort2(ok, px, py)
   return ok2
 }
 
-; Sort the results of FindText() according to the search direction
+; 按指定的查找方向，排序FindText()的结果，返回排序后的数组
 
 Sort3(ok, dir:=1)
 {
@@ -1503,7 +1498,7 @@ Sort3(ok, dir:=1)
   return ok2
 }
 
-; Prompt mouse position in remote assistance
+; 提示某个坐标的位置，或远程控制中当前鼠标的位置
 
 MouseTip(x:="", y:="", w:=10, h:=10, d:=3)
 {
@@ -1520,7 +1515,7 @@ MouseTip(x:="", y:="", w:=10, h:=10, d:=3)
   this.RangeTip()
 }
 
-; Shows a range of the borders, similar to the ToolTip
+; 显示范围的边框，类似于 ToolTip
 
 RangeTip(x:="", y:="", w:="", h:="", color:="Red", d:=3, num:=1)
 {
@@ -1683,8 +1678,8 @@ BitmapFromScreen(&x:=0, &y:=0, &w:=0, &h:=0
   return hBM
 }
 
-; Quickly save screen image to BMP file for debugging
-; if file = 0 or "", save to Clipboard
+; 快速保存截图为BMP文件，可用于调试
+; 如果 file=0 或 "" ，会保存到剪贴板
 
 SavePic(file:=0, x1:=0, y1:=0, x2:=0, y2:=0, ScreenShot:=1)
 {
@@ -1698,8 +1693,8 @@ SavePic(file:=0, x1:=0, y1:=0, x2:=0, y2:=0, ScreenShot:=1)
   DllCall("DeleteObject", "Ptr",hBM)
 }
 
-; Save Bitmap To File, if file = 0 or "", save to Clipboard
-; hBM_or_file can be a bitmap handle or file path, eg: "c:\1.bmp"
+; 保存图像到文件，如果 file=0 或者 ""，保存到剪贴板
+; 参数可以是位图句柄或者文件路径，例如： "c:\a.bmp"
 
 SaveBitmapToFile(file, hBM_or_file, x:=0, y:=0, w:=0, h:=0)
 {
@@ -1743,7 +1738,7 @@ SaveBitmapToFile(file, hBM_or_file, x:=0, y:=0, w:=0, h:=0)
   DllCall("DeleteObject", "Ptr",hBM)
 }
 
-; Show the saved Picture file
+; 显示保存的图像
 
 ShowPic(file:="", show:=1, &x:="", &y:="", &w:="", &h:="")
 {
@@ -1764,7 +1759,7 @@ ShowPic(file:="", show:=1, &x:="", &y:="", &w:="", &h:="")
   return 1
 }
 
-; Show the memory Screenshot for debugging
+; 显示内存中的屏幕截图用于调试
 
 ShowScreenShot(x1:=0, y1:=0, x2:=0, y2:=0, ScreenShot:=1)
 {
@@ -1813,7 +1808,7 @@ BitmapToWindow(hwnd, x1, y1, hBM, x2, y2, w, h)
   DllCall("DeleteDC", "Ptr",mDC)
 }
 
-; Quickly get the search data of screen image
+; 快速获取屏幕图像的搜索文本数据
 
 GetTextFromScreen(x1:=0, y1:=0, x2:=0, y2:=0, Threshold:=""
   , ScreenShot:=1, &rx:="", &ry:="", cut:=1)
@@ -1897,8 +1892,8 @@ GetTextFromScreen(x1:=0, y1:=0, x2:=0, y2:=0, Threshold:=""
   return s
 }
 
-; Wait for the screen image to change within a few seconds
-; Take a Screenshot before using it: FindText().ScreenShot()
+
+; 等待几秒钟直到屏幕图像改变，需要先调用FindText().ScreenShot()
 
 WaitChange(time:=-1, x1:=0, y1:=0, x2:=0, y2:=0)
 {
@@ -1915,7 +1910,7 @@ WaitChange(time:=-1, x1:=0, y1:=0, x2:=0, y2:=0)
   return 0
 }
 
-; Wait for the screen image to stabilize
+; 等待屏幕图像稳定下来
 
 WaitNotChange(time:=1, timeout:=30, x1:=0, y1:=0, x2:=0, y2:=0)
 {
@@ -1982,8 +1977,8 @@ ScreenToClient(&x, &y, x1, y1, id:="")
   this.ClientToScreen(&dx, &dy, 0, 0, id), x:=x1-dx, y:=y1-dy
 }
 
-; It is not like FindText always use Screen Coordinates,
-; But like built-in command PixelGetColor using CoordMode Settings
+; 不像 FindText 总是使用屏幕坐标，它使用与内置命令
+; PixelGetColor 一样的 CoordMode 设置的坐标模式
 
 PixelGetColor(x, y, ScreenShot:=1, id:="")
 {
@@ -1996,9 +1991,9 @@ PixelGetColor(x, y, ScreenShot:=1, id:="")
   return this.GetColor(x, y)
 }
 
-; It is not like FindText always use Screen Coordinates,
-; But like built-in command ImageSearch using CoordMode Settings
-; ImageFile can use "*n *TransBlack/White/RRGGBB-DRDGDB... d:\a.bmp"
+; 不像 FindText 总是使用屏幕坐标，它使用与内置命令
+; ImageSearch 一样的 CoordMode 设置的坐标模式
+; 图片文件参数可以使用 "*n *TransBlack/White/RRGGBB-DRDGDB... d:\a.bmp"
 
 ImageSearch(&rx:="", &ry:="", x1:=0, y1:=0, x2:=0, y2:=0
   , ImageFile:="", ScreenShot:=1, FindAll:=0, dir:=1)
@@ -2035,9 +2030,9 @@ ImageSearch(&rx:="", &ry:="", x1:=0, y1:=0, x2:=0, y2:=0
   }
 }
 
-; It is not like FindText always use Screen Coordinates,
-; But like built-in command PixelSearch using CoordMode Settings
-; ColorID can use "RRGGBB-DRDGDB|RRGGBB-DRDGDB", Variation in 0-255
+; 不像 FindText 总是使用屏幕坐标，它使用与内置命令
+; PixelSearch 一样的 CoordMode 设置的坐标模式
+; 颜色参数可以是 "RRGGBB-DRDGDB|RRGGBB-DRDGDB", Variation 取值 0-255
 
 PixelSearch(&rx:="", &ry:="", x1:=0, y1:=0, x2:=0, y2:=0
   , ColorID:="", Variation:=0, ScreenShot:=1, FindAll:=0, dir:=1)
@@ -2047,8 +2042,8 @@ PixelSearch(&rx:="", &ry:="", x1:=0, y1:=0, x2:=0, y2:=0
   return this.ImageSearch(&rx, &ry, x1, y1, x2, y2, text, ScreenShot, FindAll, dir)
 }
 
-; Pixel count of certain colors within the range indicated by Screen Coordinates
-; ColorID can use "RRGGBB-DRDGDB|RRGGBB-DRDGDB", Variation in 0-255
+; 屏幕坐标指示的范围内的某些颜色的像素计数
+; 颜色参数可以是 "RRGGBB-DRDGDB|RRGGBB-DRDGDB", Variation 取值 0-255
 
 PixelCount(x1:=0, y1:=0, x2:=0, y2:=0, ColorID:="", Variation:=0, ScreenShot:=1)
 {
@@ -2068,9 +2063,9 @@ PixelCount(x1:=0, y1:=0, x2:=0, y2:=0, ColorID:="", Variation:=0, ScreenShot:=1)
   return sum
 }
 
-; Create color blocks containing a specified number of specified colors
-; ColorID can use "RRGGBB-DRDGDB|RRGGBB-DRDGDB", "*128", "**50"
-; Count1, Count0 is the minimum number of black and white dots after binarization of this color block
+; 创建包含特定颜色的色块，可以限定这个色块中符合颜色的数量
+; ColorID 可以使用 "RRGGBB-DRDGDB|RRGGBB-DRDGDB", "*128", "**50"
+; Count1, Count0 是这个色块二值化后黑点和白点的数量最小值
 
 ColorBlock(ColorID, w, h, Count1:=0, Count0:=0)
 {
@@ -2096,7 +2091,7 @@ Click(x:="", y:="", other1:="", other2:="", GoBack:=0)
   return 1
 }
 
-; Running AHK code dynamically with new threads
+; 动态运行AHK代码作为新线程
 
 Class Thread
 {
@@ -2139,7 +2134,7 @@ Class Thread
   }
 }
 
-; FindText().QPC() Use the same as A_TickCount
+; FindText().QPC() 用法类似于 A_TickCount
 
 QPC()
 {
@@ -2147,7 +2142,7 @@ QPC()
   return (!DllCall("QueryPerformanceCounter", "Int64*",&c))*0+(c/f)
 }
 
-; FindText().ToolTip() Use the same as ToolTip
+; FindText().ToolTip() 用法类似于 ToolTip
 
 ToolTip(s:="", x:="", y:="", num:=1, arg:="")
 {
@@ -2204,7 +2199,7 @@ ToolTip(s:="", x:="", y:="", num:=1, arg:="")
   }
 }
 
-; FindText().ObjView()  view object values for Debug
+; FindText().ObjView() 查看对象的值用于调试
 
 ObjView(obj, keyname:="")
 {
