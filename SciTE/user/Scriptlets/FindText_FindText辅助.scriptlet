@@ -30,7 +30,7 @@ ShowScreenShot()
 {
     Print("开始截图...")
     ; 在坐标100, 100和500, 500之间进行新的屏幕截图
-    FindText().Screenshot(100, 100, 500, 500) 
+    FindText().Screenshot(100, 100, 500, 500)
     ; 在屏幕上显示拍摄的屏幕截图。由于我们指定0作为最后一个参数，该函数将使用screenshot函数之前拍摄的屏幕截图。
     FindText().ShowScreenShot(100, 100, 500, 500, 0)
 }
@@ -42,5 +42,16 @@ WaitChange()
     FindText().WaitChange(-1, 100, 100, 500, 500)
     Print("屏幕已发生变化。")
 }
-F9:: WaitChange()
+WaitNotChange()
+{
+    FindText().ScreenShot()
+    Print("等待屏幕稳定...")
+    ; 等待屏幕稳定，Timeout表示稳定的时间，MaxWait表示最大等待时间，x1,y1,x2,y2表示监控的屏幕区域
+    FindText().WaitNotChange(1, 30, 967, 715, 1124, 755)
+    Print("屏幕已稳定。")
+    ; 等待区域(100,100)-(500,300)画面稳定0.5秒，最多等5秒
+    FindText().WaitNotChange(0.5, 5, 100, 100, 500, 300)
+}
+
+F9:: WaitNotChange()
 Esc:: ExitApp ; 按下 Esc 键退出脚本
